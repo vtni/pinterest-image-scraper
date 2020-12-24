@@ -5,22 +5,42 @@ import time,random,socket,unicodedata
 import string, copy, os
 import pandas as pd
 import requests
+from PIL import Image
 try:
     from urlparse import urlparse
 except ImportError:
     from six.moves.urllib.parse import urlparse
 
+min_x, min_y = 512, 512
+def verify_size(width, height):
+    long_side = max(width, height)
+    short_side = min(width, height)
+    long_given = max(min_x, min_y)
+    short_given = min(min_x, min_y)
+    return long_given <= long_side and short_given <= short_side
+
 def download(myinput, mydir = "./"):
     if isinstance(myinput, str) or isinstance(myinput, bytes):
+        #https://stackoverflow.com/questions/18727347/how-to-extract-a-filename-from-a-url-append-a-word-to-it
+        outfile = mydir + "/" + os.path.basename(urlparse(myinput.decode("utf-8") ).path)
+        try:
+            f = open(outfile)
+            return
+        finally:
+            f.close()
         #http://automatetheboringstuff.com/chapter11/
         res = requests.get(myinput)
         res.raise_for_status()
-        #https://stackoverflow.com/questions/18727347/how-to-extract-a-filename-from-a-url-append-a-word-to-it
-        outfile = mydir + "/" + os.path.basename(urlparse(myinput).path)
         playFile = open(outfile, 'wb')
         for chunk in res.iter_content(100000):
             playFile.write(chunk)
         playFile.close()
+        # with Image.open(outfile) as img:
+        #     width, height = img.size
+        #     img.close()
+        # # If the image was smaller then we want, we delete it again
+        # if not verify_size(width, height):
+        #     os.remove(outfile)
     elif isinstance(myinput, list):
         for i in myinput:
             download(i, mydir)
@@ -36,7 +56,7 @@ def phantom_noimages():
     caps = DesiredCapabilities.PHANTOMJS
     caps["phantomjs.page.settings.userAgent"] = ua.random
     return webdriver.PhantomJS(service_args=["--load-images=no"], desired_capabilities=caps)
-        
+
 
 def randdelay(a,b):
     time.sleep(random.uniform(a,b))
@@ -45,7 +65,7 @@ def u_to_s(uni):
     return unicodedata.normalize('NFKD',uni).encode('ascii','ignore')
 
 class Pinterest_Helper(object):
-    
+
     def __init__(self, login, pw, browser = None):
         if browser is None:
             #http://tarunlalwani.com/post/selenium-disable-image-loading-different-browsers/
@@ -54,14 +74,14 @@ class Pinterest_Helper(object):
             self.browser = webdriver.Firefox(firefox_profile=profile)
         else:
             self.browser = browser
-        self.browser.get("https://www.pinterest.com")
+        self.browser.get("https://www.pinterest.de/login/?referrer=home_page")
         emailElem = self.browser.find_element_by_name('id')
         emailElem.send_keys(login)
         passwordElem = self.browser.find_element_by_name('password')
         passwordElem.send_keys(pw)
         passwordElem.send_keys(Keys.RETURN)
         randdelay(2,4)
-    
+
     def getURLs(self, urlcsv, threshold = 500):
         tmp = self.read(urlcsv)
         results = []
@@ -70,19 +90,19 @@ class Pinterest_Helper(object):
             results = list(set(results + tmp3))
         random.shuffle(results)
         return results
-    
+
     def write(self, myfile, mylist):
         tmp = pd.DataFrame(mylist)
         tmp.to_csv(myfile, index=False, header=False)
-    
+
     def read(self,myfile):
         tmp = pd.read_csv(myfile,header=None).values.tolist()
         tmp2 = []
         for i in range(0,len(tmp)):
             tmp2.append(tmp[i][0])
-        return tmp2        
-        
-    
+        return tmp2
+
+
     def runme(self,url, threshold = 500, persistence = 120, debug = False):
         final_results = []
         previmages = []
@@ -107,10 +127,10 @@ class Pinterest_Helper(object):
                             if src.find("/236x/") != -1:
                                 src = src.replace("/236x/","/736x/")
                                 results.append(u_to_s(src))
+                    print("Added image urls:", len(images))
                     previmages = copy.copy(images)
                     final_results = list(set(final_results + results))
-                    dummy = self.browser.find_element_by_tag_name('a')
-                    dummy.send_keys(Keys.PAGE_DOWN)
+                    self.browser.execute_script("window.scrollTo(0,document.body.scrollHeight)")
                     randdelay(1,2)
                     threshold -= 1
                 except (StaleElementReferenceException):
@@ -177,8 +197,8 @@ class Pinterest_Helper(object):
             return final_results
         if debug == True:
             print("Exitting at end")
-        return final_results        
- 
+        return final_results
+
     def scrape_old(self, url):
         results = []
         self.browser.get(url)
@@ -190,14 +210,12 @@ class Pinterest_Helper(object):
                     src = string.replace(src,"/236x/","/736x/")
                     results.append(u_to_s(src))
         return results
-            
-        
-        
-        
-        
-    
+
+
+
+
+
+
     def close(self):
         self.browser.close()
-    
-    
-    
+
