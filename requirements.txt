@@ -1,2 +1,6 @@
-pandas
-selenium
+pandas~=1.1.5
+selenium~=3.141.0
+setuptools~=51.1.0
+requests~=2.25.1
+Pillow~=8.0.1
+six~=1.15.0
