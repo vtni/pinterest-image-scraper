@@ -23,11 +23,8 @@ def download(myinput, mydir = "./"):
     if isinstance(myinput, str) or isinstance(myinput, bytes):
         #https://stackoverflow.com/questions/18727347/how-to-extract-a-filename-from-a-url-append-a-word-to-it
         outfile = mydir + "/" + os.path.basename(urlparse(myinput.decode("utf-8") ).path)
-        try:
-            f = open(outfile)
+        if os.path.isfile(outfile):
             return
-        finally:
-            f.close()
         #http://automatetheboringstuff.com/chapter11/
         res = requests.get(myinput)
         res.raise_for_status()
@@ -127,7 +124,6 @@ class Pinterest_Helper(object):
                             if src.find("/236x/") != -1:
                                 src = src.replace("/236x/","/736x/")
                                 results.append(u_to_s(src))
-                    print("Added image urls:", len(images))
                     previmages = copy.copy(images)
                     final_results = list(set(final_results + results))
                     self.browser.execute_script("window.scrollTo(0,document.body.scrollHeight)")
@@ -218,4 +214,6 @@ class Pinterest_Helper(object):
 
     def close(self):
         self.browser.close()
+
+
 
